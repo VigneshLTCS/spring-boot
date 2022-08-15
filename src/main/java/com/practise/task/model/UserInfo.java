@@ -1,5 +1,7 @@
 package com.practise.task.model;
 
+import org.bson.types.ObjectId;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,7 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserInfo {
-	private Long id;
+	private ObjectId id;
 	
 	private String firstName;
 	
@@ -19,11 +21,6 @@ public class UserInfo {
 	private String emailId;
 	
 	private String phoneNumber;
-	
-	private String address1;
-	
-	private String address2;
-	
-	
+		
 
 }

@@ -1,6 +1,10 @@
 package com.practise.task.service;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
 import javax.persistence.EntityNotFoundException;
 
+import org.bson.types.ObjectId;
 import org.hibernate.exception.GenericJDBCException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +16,7 @@ import com.practise.task.model.LoginData;
 import com.practise.task.model.LoginResponseData;
 import com.practise.task.model.RegisterData;
 import com.practise.task.model.ResponseData;
+import com.practise.task.model.UpdateUserRequest;
 import com.practise.task.model.UserInfo;
 import com.practise.task.respository.UserRepo;
 import com.practise.task.util.Util;
@@ -24,15 +29,6 @@ public class AuthServiceImpl  {
 	@Autowired
 	Util util;
 	
-	public LoginResponseData validateUser(User user, LoginData loginData) {
-		if (user == null) {
-			return new LoginResponseData(404, "User not found! Try Register");
-		}else if(user.getPassword().equalsIgnoreCase(loginData.getPassword())) {
-			return new LoginResponseData(200, "Login Successful", user.getId());
-		}
-		return new LoginResponseData(500, "Internal server error");
-	}
-	
 	public ResponseData registerUser(RegisterData registerData) {
 		User user = new User();
 		BeanUtils.copyProperties(registerData, user);
@@ -40,45 +36,62 @@ public class AuthServiceImpl  {
 		return new ResponseData(200, "Registered Successfully");
 	}
 	
-	public ResponseData updateUserInfo(RegisterData userData) {
-		User user = repo.findByEmailId(userData.getEmailId());
-		BeanUtils.copyProperties(userData, user, this.util.getNullPropertyNames(userData));
-		repo.save(user);
-		return new ResponseData(200, "User profile is updated");
-	}
-	
-	public ResponseData deleteUser(Long id) {
+	public ResponseData updateUserInfo(UpdateUserRequest dataToUpdate) {
 		try {
-				repo.deleteById(id);
-				return new ResponseData(200, "User is deleted.");
-			
+			User user = this.findUserById(dataToUpdate.getId());
+			user.setFirstName(dataToUpdate.getFirstName());
+			user.setLastName(dataToUpdate.getLastName());
+			user.setEmailId(dataToUpdate.getEmailId());
+			user.setPhoneNumber(dataToUpdate.getPhoneNumber());
+			user.setUserName(dataToUpdate.getUserName());
+			repo.save(user);
+			return new ResponseData(200, "User profile is updated");
 		}
-		catch(GenericJDBCException e) {
-			return new ResponseData(401, "Bad Request");
-		}
-		catch(EmptyResultDataAccessException e) {
+		catch(NullPointerException e) {
 			return new ResponseData(404, "User not found");
 		}
-		
+	}
+	
+	 private User findUserById(String id) {
+			 Optional<User> result = repo.findById(new ObjectId(id));
+		     return result.orElseThrow(() -> null);
+	 }
+	
+	public ResponseData deleteUser(String id) {
+		try {
+			User deleted =this.findUserById(id);
+			repo.delete(deleted);
+			return new ResponseData(200, "User is deleted.");
+		}
+		catch(NullPointerException e) {
+			return new ResponseData(404, "User not found");
+		}
+			
 	}
 	
 	public boolean checkUserIfAlreadyExists(String email) {
 		return repo.findByEmailId(email) !=null ? true : false;
 	}
 	
-	public UserInfo fetchUserData(Long id) {
-		User user = repo.getById(id);
-		UserInfo info = new UserInfo();
-		bindUserData(user, info);
-		return info;
-	}
-
-	private void bindUserData(User user, UserInfo info) {
-		info.setAddress1(user.getAddress1());
-		info.setAddress2(user.getAddress2());
-		info.setEmailId(user.getEmailId());
-		info.setFirstName(user.getFirstName());
-		info.setLastName(user.getLastName());
+	
+	public UserInfo fetchUserData(String id) {
+		try {
+			Optional<User> user = repo.findById(new ObjectId(id));
+			//if(user != null) {
+				UserInfo info = new UserInfo();
+				info.setFirstName(user.get().getFirstName());
+				info.setLastName(user.get().getLastName());
+				info.setEmailId(user.get().getEmailId());
+				info.setPhoneNumber(user.get().getPhoneNumber());
+				info.setUserName(user.get().getUserName());
+				info.setId(user.get().getId());
+			//}
+			return info;
+		}
+		catch(NoSuchElementException e) {
+			return null;
+		}
+			
 	}
 	
 }
